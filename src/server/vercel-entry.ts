@@ -1,5 +1,5 @@
 import type { Request, Response } from 'express';
-import { createWorkspaceApp } from '../server.js';
+import { createWorkspaceApp } from '../../server.js';
 
 let appPromise: ReturnType<typeof createWorkspaceApp> | null = null;
 
@@ -9,7 +9,7 @@ export default async function handler(req: Request, res: Response): Promise<void
       appPromise = createWorkspaceApp();
     }
     const app = await appPromise;
-    await new Promise<void>((resolve, reject) => {
+    await new Promise<void>((resolve) => {
       let settled = false;
       const done = () => {
         if (!settled) {
@@ -19,14 +19,7 @@ export default async function handler(req: Request, res: Response): Promise<void
       };
       res.once('finish', done);
       res.once('close', done);
-      app(req, res, (err?: unknown) => {
-        if (err && !settled) {
-          settled = true;
-          reject(err);
-        } else {
-          done();
-        }
-      });
+      app(req, res);
     });
   } catch (err) {
     appPromise = null;
