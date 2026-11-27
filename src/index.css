@@ -1,0 +1,110 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-display: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-sans: "Public Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --color-brand-obsidian: #090A0D;
+  --color-brand-ink: #111215;
+  --color-brand-charcoal: #22252A;
+  --color-brand-silver: #D8D8D8;
+  --color-surface-canvas: #FAFAFB;
+  --color-surface-panel: #FFFFFF;
+  --color-border-default: #E5E7EB;
+  --color-text-primary: #111215;
+  --color-text-secondary: #5E6572;
+  --color-status-success: #1F764D;
+  --color-status-progress: #2B3445;
+  --color-status-warning: #9B6B08;
+  --color-status-danger: #B42318;
+  --color-status-neutral: #6B7280;
+}
+
+@layer base {
+  html {
+    font-family: var(--font-sans);
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    color: #111215;
+    background-color: #FAFAFB;
+    color-scheme: light;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  html.dark {
+    color: #F3F4F6;
+    background-color: #090A0D;
+    color-scheme: dark;
+  }
+
+  h1, h2, h3, h4, .font-display {
+    font-family: var(--font-display);
+    letter-spacing: -0.02em;
+  }
+
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+
+  button:focus-visible,
+  a:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible {
+    outline: 2px solid #111215;
+    outline-offset: 2px;
+  }
+
+  html.dark button:focus-visible,
+  html.dark a:focus-visible,
+  html.dark input:focus-visible,
+  html.dark select:focus-visible,
+  html.dark textarea:focus-visible {
+    outline-color: #E5E7EB;
+  }
+
+  /* Precision scrollbars matching modern desktop interfaces */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(107, 114, 128, 0.28) transparent;
+  }
+
+  *::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  *::-webkit-scrollbar-thumb {
+    background-color: rgba(107, 114, 128, 0.25);
+    border-radius: 9999px;
+  }
+
+  *::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(107, 114, 128, 0.45);
+  }
+}
+
+/* Subtle architectural coordinate grid for the sign-in platform stage */
+.truvornex-grid-bg {
+  background-image:
+    radial-gradient(circle at 20% 18%, rgba(255, 255, 255, 0.08) 0%, transparent 48%),
+    linear-gradient(to right, rgba(255, 255, 255, 0.045) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.045) 1px, transparent 1px);
+  background-size: 100% 100%, 40px 40px, 40px 40px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

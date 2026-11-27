@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 720" role="img" aria-labelledby="title desc">
+  <title id="title">Truvornex mark</title>
+  <desc id="desc">A black rounded square containing three white horizontal rounded bars and a light grey circle intersecting the end of the lowest bar.</desc>
+  <rect width="720" height="720" rx="112" fill="#050505"/>
+  <g fill="#fff">
+    <rect x="164" y="205" width="391" height="43" rx="21.5"/>
+    <rect x="164" y="335" width="347" height="43" rx="21.5"/>
+    <rect x="164" y="466" width="303" height="43" rx="21.5"/>
+  </g>
+  <circle cx="533" cy="487" r="86" fill="#d8d8d8"/>
+</svg>

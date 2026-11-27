@@ -1,0 +1,6 @@
+{
+  "name": "Truvornex Engineering Workspace",
+  "description": "Private engineering workspace for planning, architecture, delivery tracking, documentation, and engineering integrations across the Truvornex infrastructure programme.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

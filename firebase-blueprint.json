@@ -1,0 +1,196 @@
+{
+  "entities": {
+    "UserPublicProfile": {
+      "title": "User Public Profile",
+      "description": "Public workspace display metadata for a verified account slot.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "displayName": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 80
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "presence": {
+          "type": "string",
+          "enum": ["active", "focus", "reviewing", "away"]
+        },
+        "authProvider": {
+          "type": "string",
+          "enum": ["firebase", "supabase"]
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["uid", "displayName", "title", "presence", "authProvider", "createdAt", "updatedAt"]
+    },
+    "UserPrivateInfo": {
+      "title": "User Private Info",
+      "description": "PII and personal notification preferences isolated to owner and admins.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "minLength": 5,
+          "maxLength": 160
+        },
+        "chatNotificationMode": {
+          "type": "string",
+          "enum": ["mentions_only", "all_messages", "muted"]
+        },
+        "notifyOnChannelAll": {
+          "type": "boolean"
+        },
+        "desktopAlerts": {
+          "type": "boolean"
+        },
+        "timezone": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 64
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["uid", "email", "chatNotificationMode", "notifyOnChannelAll", "desktopAlerts", "timezone", "updatedAt"]
+    },
+    "ChatChannel": {
+      "title": "Workspace Chat Channel",
+      "description": "Engineering collaboration channel with topic and visibility metadata.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 64
+        },
+        "topic": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 240
+        },
+        "projectId": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 64
+        },
+        "createdBy": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "isPrivate": {
+          "type": "boolean"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["id", "name", "topic", "createdBy", "isPrivate", "createdAt"]
+    },
+    "ChatMessage": {
+      "title": "Workspace Chat Message",
+      "description": "Persisted channel message supporting @mentions, pins, reactions, and thread replies.",
+      "type": "object",
+      "properties": {
+        "channelId": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "authorId": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "authorName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "body": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4000
+        },
+        "parentMessageId": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 128
+        },
+        "mentions": {
+          "type": "array",
+          "description": "Up to 8 mentioned user IDs."
+        },
+        "pinned": {
+          "type": "boolean"
+        },
+        "edited": {
+          "type": "boolean"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["channelId", "authorId", "authorName", "body", "pinned", "edited", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}/public/{docId}": {
+      "schema": { "$ref": "#/entities/UserPublicProfile" },
+      "description": "Public profile visible to authenticated workspace members."
+    },
+    "/users/{userId}/private/{docId}": {
+      "schema": { "$ref": "#/entities/UserPrivateInfo" },
+      "description": "Private PII and notification preferences restricted to owner and admins."
+    },
+    "/chatChannels/{channelId}": {
+      "schema": { "$ref": "#/entities/ChatChannel" },
+      "description": "Workspace chat channels."
+    },
+    "/chatChannels/{channelId}/messages/{messageId}": {
+      "schema": { "$ref": "#/entities/ChatMessage" },
+      "description": "Channel messages and thread replies."
+    }
+  }
+}

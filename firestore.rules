@@ -1,0 +1,201 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global Safety Net (Default Deny)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Global Hardened Primitives ---
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isOwner(userId) {
+      return isVerified() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isVerified() && (
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
+        request.auth.token.email == 'zomerceofficial@gmail.com'
+      );
+    }
+
+    function isValidPublicProfile(data, userId) {
+      return data.keys().hasAll(['uid', 'displayName', 'title', 'presence', 'authProvider', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['uid', 'displayName', 'title', 'presence', 'authProvider', 'createdAt', 'updatedAt'])
+        && isValidId(data.uid)
+        && data.uid == userId
+        && data.displayName is string && data.displayName.size() >= 2 && data.displayName.size() <= 80
+        && data.title is string && data.title.size() >= 1 && data.title.size() <= 80
+        && data.presence in ['active', 'focus', 'reviewing', 'away']
+        && data.authProvider in ['firebase', 'supabase']
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidPrivateInfo(data, userId) {
+      return data.keys().hasAll(['uid', 'email', 'chatNotificationMode', 'notifyOnChannelAll', 'desktopAlerts', 'timezone', 'updatedAt'])
+        && data.keys().hasOnly(['uid', 'email', 'chatNotificationMode', 'notifyOnChannelAll', 'desktopAlerts', 'timezone', 'updatedAt'])
+        && isValidId(data.uid)
+        && data.uid == userId
+        && data.email is string && data.email.size() >= 5 && data.email.size() <= 160
+        && data.chatNotificationMode in ['mentions_only', 'all_messages', 'muted']
+        && data.notifyOnChannelAll is bool
+        && data.desktopAlerts is bool
+        && data.timezone is string && data.timezone.size() >= 2 && data.timezone.size() <= 64
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidChatChannel(data, channelId) {
+      return data.keys().hasAll(['id', 'name', 'topic', 'createdBy', 'isPrivate', 'createdAt'])
+        && data.keys().hasOnly(['id', 'name', 'topic', 'projectId', 'createdBy', 'isPrivate', 'createdAt'])
+        && isValidId(data.id)
+        && data.id == channelId
+        && data.name is string && data.name.size() >= 2 && data.name.size() <= 64
+        && data.topic is string && data.topic.size() <= 240
+        && (!('projectId' in data) || (data.projectId is string && data.projectId.size() <= 64))
+        && isValidId(data.createdBy)
+        && data.isPrivate is bool
+        && data.createdAt is timestamp;
+    }
+
+    function isValidChatMessage(data, channelId) {
+      return data.keys().hasAll(['channelId', 'authorId', 'authorName', 'body', 'pinned', 'edited', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['channelId', 'authorId', 'authorName', 'body', 'parentMessageId', 'mentions', 'pinned', 'edited', 'createdAt', 'updatedAt'])
+        && isValidId(data.channelId)
+        && data.channelId == channelId
+        && isValidId(data.authorId)
+        && data.authorName is string && data.authorName.size() >= 1 && data.authorName.size() <= 80
+        && data.body is string && data.body.size() >= 1 && data.body.size() <= 4000
+        && (!('parentMessageId' in data) || (data.parentMessageId is string && data.parentMessageId.size() <= 128))
+        && (!('mentions' in data) || (data.mentions is list && data.mentions.size() <= 8 && (data.mentions.size() == 0 || data.mentions[0] is string)))
+        && data.pinned is bool
+        && data.edited is bool
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    // Connection probe document
+    match /test/connection {
+      allow get: if isSignedIn();
+    }
+
+    // Admin registry (read-only by admins, managed via privileged console/owner)
+    match /admins/{adminId} {
+      allow get: if isValidId(adminId) && isVerified() && (request.auth.uid == adminId || isAdmin());
+      allow write: if false;
+    }
+
+    // User public profile (non-PII)
+    match /users/{userId}/public/{docId} {
+      allow get: if isValidId(userId) && isValidId(docId) && isVerified();
+      allow list: if isVerified() && resource.data.uid is string;
+      allow create: if isValidId(userId)
+        && isValidId(docId)
+        && isOwner(userId)
+        && isValidPublicProfile(incoming(), userId)
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isValidId(userId)
+        && isValidId(docId)
+        && isValidPublicProfile(incoming(), userId)
+        && incoming().uid == existing().uid
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (isOwner(userId) || isAdmin())
+        && incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'title', 'presence', 'updatedAt']);
+      allow delete: if isValidId(userId) && isValidId(docId) && isAdmin();
+    }
+
+    // User private PII & notification mode preferences
+    match /users/{userId}/private/{docId} {
+      allow get: if isValidId(userId) && isValidId(docId) && (isOwner(userId) || isAdmin());
+      allow create: if isValidId(userId)
+        && isValidId(docId)
+        && isOwner(userId)
+        && isValidPrivateInfo(incoming(), userId)
+        && incoming().updatedAt == request.time;
+      allow update: if isValidId(userId)
+        && isValidId(docId)
+        && isValidPrivateInfo(incoming(), userId)
+        && incoming().uid == existing().uid
+        && incoming().updatedAt == request.time
+        && (isOwner(userId) || isAdmin())
+        && incoming().diff(existing()).affectedKeys().hasOnly([
+          'chatNotificationMode',
+          'notifyOnChannelAll',
+          'desktopAlerts',
+          'timezone',
+          'updatedAt'
+        ]);
+      allow delete: if isValidId(userId) && isValidId(docId) && isAdmin();
+    }
+
+    // Workspace chat channels
+    match /chatChannels/{channelId} {
+      allow get: if isValidId(channelId) && isVerified() && (!existing().isPrivate || isAdmin() || existing().createdBy == request.auth.uid);
+      allow list: if isVerified() && resource.data.isPrivate == false;
+      allow create: if isValidId(channelId)
+        && isVerified()
+        && isValidChatChannel(incoming(), channelId)
+        && incoming().createdBy == request.auth.uid
+        && incoming().createdAt == request.time;
+      allow update: if isValidId(channelId)
+        && isVerified()
+        && isValidChatChannel(incoming(), channelId)
+        && incoming().id == existing().id
+        && incoming().createdBy == existing().createdBy
+        && incoming().createdAt == existing().createdAt
+        && (existing().createdBy == request.auth.uid || isAdmin())
+        && incoming().diff(existing()).affectedKeys().hasOnly(['name', 'topic']);
+      allow delete: if isValidId(channelId) && isAdmin();
+
+      match /messages/{messageId} {
+        allow get: if isValidId(channelId) && isValidId(messageId) && isVerified();
+        allow list: if isVerified() && resource.data.channelId == channelId;
+        allow create: if isValidId(channelId)
+          && isValidId(messageId)
+          && isVerified()
+          && exists(/databases/$(database)/documents/chatChannels/$(channelId))
+          && isValidChatMessage(incoming(), channelId)
+          && incoming().authorId == request.auth.uid
+          && incoming().createdAt == request.time
+          && incoming().updatedAt == request.time;
+        allow update: if isValidId(channelId)
+          && isValidId(messageId)
+          && isVerified()
+          && isValidChatMessage(incoming(), channelId)
+          && incoming().channelId == existing().channelId
+          && incoming().authorId == existing().authorId
+          && incoming().createdAt == existing().createdAt
+          && incoming().updatedAt == request.time
+          && (
+            (isAdmin() && incoming().diff(existing()).affectedKeys().hasOnly(['pinned', 'body', 'edited', 'updatedAt'])) ||
+            (existing().authorId == request.auth.uid && incoming().diff(existing()).affectedKeys().hasOnly(['body', 'edited', 'mentions', 'pinned', 'updatedAt']))
+          );
+        allow delete: if isValidId(channelId)
+          && isValidId(messageId)
+          && isVerified()
+          && (existing().authorId == request.auth.uid || isAdmin());
+      }
+    }
+  }
+}
